@@ -101,43 +101,24 @@ This project is designed as a step-by-step replication rather than an attempt to
 deep-ensembles-replication/
 
 ├── README.md
-
 ├── requirements.txt
-
 ├── configs/
-
 │   └── mnist.yaml
-
 ├── src/
-
 │   ├── data.py
-
 │   ├── model.py
-
 │   ├── train.py
-
 │   ├── evaluate.py
-
 │   ├── ensemble.py
-
 │   └── metrics.py
-
 ├── scripts/
-
 │   ├── train_single.py
-
 │   ├── train_ensemble.py
-
 │   └── evaluate_mnist.py
-
 ├── results/
-
 │   ├── figures/
-
 │   └── tables/
-
 └── report/
-
    └── replication_report.md
 
 ```
