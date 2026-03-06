@@ -128,10 +128,10 @@ This project is currently in the setup and baseline implementation phase.
 * ✅ Add initial README
 * ✅ Set up environment and dependencies
 * ✅ Implement MNIST data pipeline
-* ❌ Implement baseline classifier
-* ❌ Implement evaluation metrics
-* ❌ Implement reliability diagram
-* ❌ Add runnable training and evaluation scripts
+* ✅ Implement baseline classifier
+* ✅ Implement evaluation metrics
+* ✅ Implement reliability diagram
+* ✅ Add runnable training and evaluation scripts
 
 
 
