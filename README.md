@@ -6,7 +6,7 @@ A PyTorch replication of *Simple and Scalable Predictive Uncertainty Estimation 
 
 
 
-\## Overview
+## Overview
 
 
 
