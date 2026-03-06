@@ -127,7 +127,7 @@ This project is currently in the setup and baseline implementation phase.
 * ✅ Add `.gitignore`
 * ✅ Add initial README
 * ✅ Set up environment and dependencies
-* ❌ Implement MNIST data pipeline
+* ✅ Implement MNIST data pipeline
 * ❌ Implement baseline classifier
 * ❌ Implement evaluation metrics
 * ❌ Implement reliability diagram
