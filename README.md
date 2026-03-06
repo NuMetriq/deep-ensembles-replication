@@ -126,7 +126,7 @@ This project is currently in the setup and baseline implementation phase.
 * ✅ Create local project structure
 * ✅ Add `.gitignore`
 * ✅ Add initial README
-* ❌ Set up environment and dependencies
+* ✅ Set up environment and dependencies
 * ❌ Implement MNIST data pipeline
 * ❌ Implement baseline classifier
 * ❌ Implement evaluation metrics
