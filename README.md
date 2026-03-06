@@ -25,9 +25,7 @@ The broader goal is to understand how deep ensembles improve uncertainty estimat
 **Reference**  
 
 Balaji Lakshminarayanan, Alexander Pritzel, and Charles Blundell.  
-
 *Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles.*  
-
 NeurIPS 2017.
 
 
@@ -55,13 +53,9 @@ This project is designed as a step-by-step replication rather than an attempt to
 ### Initial scope
 
 - Train a single baseline classifier on MNIST
-
 - Train an ensemble of 5 independently initialized classifiers
-
 - Compare single-model vs ensemble performance
-
 - Evaluate uncertainty-aware metrics
-
 - Generate calibration plots
 
 
@@ -69,13 +63,9 @@ This project is designed as a step-by-step replication rather than an attempt to
 ### Metrics
 
 - Accuracy
-
 - Negative Log-Likelihood (NLL)
-
 - Brier Score
-
 - Reliability Diagram
-
 - Expected Calibration Error (optional extension)
 
 
@@ -83,11 +73,8 @@ This project is designed as a step-by-step replication rather than an attempt to
 ### Possible later extensions
 
 - MC Dropout comparison
-
 - Adversarial training
-
 - Out-of-distribution evaluation
-
 - Additional datasets beyond MNIST
 
 
