@@ -7,6 +7,7 @@ from src.metrics import (
     brier_score_from_logits,
     compute_metrics,
     nll_from_logits,
+    reliability_diagram_stats,
 )
 
 
@@ -56,3 +57,27 @@ def test_compute_metrics_returns_expected_keys():
     assert 0.0 <= metrics["accuracy"] <= 1.0
     assert metrics["nll"] >= 0.0
     assert metrics["brier"] >= 0.0
+
+
+def test_reliability_bin_counts_sum_to_n():
+    torch.manual_seed(0)
+    logits = torch.randn(1000, 10)
+    targets = torch.randint(0, 10, (1000,))
+
+    stats = reliability_diagram_stats(logits, targets, n_bins=10)
+
+    assert int(stats["bin_counts"].sum().item()) == 1000
+
+
+def test_reliability_stats_shapes():
+    torch.manual_seed(0)
+    logits = torch.randn(50, 10)
+    targets = torch.randint(0, 10, (50,))
+
+    stats = reliability_diagram_stats(logits, targets, n_bins=15)
+
+    assert stats["bin_edges"].shape == (16,)
+    assert stats["bin_centers"].shape == (15,)
+    assert stats["bin_counts"].shape == (15,)
+    assert stats["avg_confidence"].shape == (15,)
+    assert stats["avg_accuracy"].shape == (15,)

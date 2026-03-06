@@ -97,6 +97,78 @@ def brier_score_from_logits(logits: torch.Tensor, targets: torch.Tensor) -> floa
     return float(brier.item())
 
 
+def reliability_diagram_stats(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    n_bins: int = 10,
+) -> Dict[str, torch.Tensor]:
+    """
+    Compute bin-wise statistics for a reliability diagram.
+
+    Parameters
+    ----------
+    logits : torch.Tensor
+        Shape (N, C), raw model outputs.
+    targets : torch.Tensor
+        Shape (N,), integer class labels.
+    n_bins : int
+        Number of confidence bins.
+
+    Returns
+    -------
+    dict[str, torch.Tensor]
+        Dictionary containing:
+        - bin_edges: shape (n_bins + 1,)
+        - bin_centers: shape (n_bins,)
+        - bin_counts: shape (n_bins,)
+        - avg_confidence: shape (n_bins,)
+        - avg_accuracy: shape (n_bins,)
+    """
+    if logits.ndim != 2:
+        raise ValueError(f"logits must have shape (N, C), got {tuple(logits.shape)}")
+    if targets.ndim != 1:
+        raise ValueError(f"targets must have shape (N,), got {tuple(targets.shape)}")
+    if logits.shape[0] != targets.shape[0]:
+        raise ValueError("logits and targets must have the same batch size")
+    if n_bins <= 0:
+        raise ValueError("n_bins must be positive")
+
+    probs = torch.softmax(logits, dim=1)
+    confidences, predictions = probs.max(dim=1)
+    correctness = (predictions == targets).float()
+
+    bin_edges = torch.linspace(0.0, 1.0, steps=n_bins + 1, device=logits.device)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    bin_counts = torch.zeros(n_bins, dtype=torch.long, device=logits.device)
+    avg_confidence = torch.zeros(n_bins, dtype=torch.float32, device=logits.device)
+    avg_accuracy = torch.zeros(n_bins, dtype=torch.float32, device=logits.device)
+
+    for i in range(n_bins):
+        left = bin_edges[i]
+        right = bin_edges[i + 1]
+
+        if i == 0:
+            in_bin = (confidences >= left) & (confidences <= right)
+        else:
+            in_bin = (confidences > left) & (confidences <= right)
+
+        count = in_bin.sum()
+        bin_counts[i] = count
+
+        if count > 0:
+            avg_confidence[i] = confidences[in_bin].mean()
+            avg_accuracy[i] = correctness[in_bin].mean()
+
+    return {
+        "bin_edges": bin_edges.detach().cpu(),
+        "bin_centers": bin_centers.detach().cpu(),
+        "bin_counts": bin_counts.detach().cpu(),
+        "avg_confidence": avg_confidence.detach().cpu(),
+        "avg_accuracy": avg_accuracy.detach().cpu(),
+    }
+
+
 def compute_metrics(logits: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
     """
     Compute the main classification metrics from raw logits.
