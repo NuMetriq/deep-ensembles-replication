@@ -1,6 +1,16 @@
 import torch
 from src.model import MNISTClassifier
-from src.train import train_one_epoch
+from src.train import set_seed, train_one_epoch
+
+
+def test_set_seed_reproducible_torch_randomness():
+    set_seed(123)
+    a = torch.randn(4)
+
+    set_seed(123)
+    b = torch.randn(4)
+
+    assert torch.allclose(a, b)
 
 
 def test_train_one_epoch_returns_metrics():
