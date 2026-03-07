@@ -89,9 +89,13 @@ deep-ensembles-replication/
 
 ├── README.md
 ├── requirements.txt
+├── pytest.ini
+├── .gitignore
 ├── configs/
 │   └── mnist.yaml
 ├── src/
+│   ├── __init__.py
+│   ├── plotting.py
 │   ├── data.py
 │   ├── model.py
 │   ├── train.py
@@ -99,9 +103,21 @@ deep-ensembles-replication/
 │   ├── ensemble.py
 │   └── metrics.py
 ├── scripts/
+│   ├── __init__.py
+│   ├── compare_results.py
+│   ├── evaluate_ensemble.py
+│   ├── save_comparison_artifacts.py
 │   ├── train_single.py
 │   ├── train_ensemble.py
 │   └── evaluate_mnist.py
+├── tests/
+│   ├── test_data.py
+│   ├── test_ensemble.py
+│   ├── test_evaluate.py
+│   ├── test_metrics.py
+│   ├── test_model.py
+│   ├── test_plotting.py
+│   └── test_train.py
 ├── results/
 │   ├── figures/
 │   └── tables/
@@ -109,29 +125,6 @@ deep-ensembles-replication/
    └── replication_report.md
 
 ```
-
-
-
-## Current Status
-
-
-
-This project is currently in the setup and baseline implementation phase.
-
-
-
-### Milestone: v0.1.0 - Baseline Replication Setup
-
-* ✅ Create GitHub repository
-* ✅ Create local project structure
-* ✅ Add `.gitignore`
-* ✅ Add initial README
-* ✅ Set up environment and dependencies
-* ✅ Implement MNIST data pipeline
-* ✅ Implement baseline classifier
-* ✅ Implement evaluation metrics
-* ✅ Implement reliability diagram
-* ✅ Add runnable training and evaluation scripts
 
 
 
@@ -193,45 +186,168 @@ pip install -r requirements.txt
 
 
 
-## Usage
+## How to Reproduce the Results
 
 
 
-Instructions will be added as components are implemented.
+### Train the baseline model
 
 
-
-Planned commands:
-
-
-
-### Train baseline model
 
 ```bash
-
-python scripts/train_single.py
-
+python -m scripts.train_single
 ```
 
 
+### Evaluate the baseline model
 
-### Train ensemble
 
 ```bash
-
-python scripts/train_ensemble.py
-
+python -m scripts.evaluate_mnist
 ```
 
 
+### Train the deep ensemble
 
-### Evaluate model(s)
 
 ```bash
-
-python scripts/evaluate_mnist.py
-
+python -m scripts/train_ensemble
 ```
+
+
+### Evaluate the deep ensemble
+
+
+```bash
+python -m scripts.evaluate_ensemble
+```
+
+
+### Generate comparison artifacts
+
+
+```bash
+python -m scripts.compare_results
+python -m scripts.save_comparison_artifacts
+```
+
+
+## Results
+
+
+
+### Experiment
+For the `v0.2.0` milestone, I trained:
+
+- **Baseline:** 1 MNIST classifier
+- **Ensemble:** 5 independently initialized MNIST classifiers, with predictions combined by averaging class probabilities
+
+### Evaluation Metrics
+The main evaluation metrics were:
+
+- Accuracy
+- Negative Log-Likelihood (NLL)
+- Brier Score
+- Reliability Diagram
+
+### Summary Table
+
+| Metric | Baseline | Ensemble | Delta (Ensemble - Baseline) |
+|---|---:|---:|---:|
+| Accuracy | 0.990200 | 0.992400 | +0.002200 |
+| NLL | 0.033565 | 0.020762 | -0.012803 |
+| Brier | 0.016628 | 0.010863 | -0.005765 |
+
+### Calibration Plots
+
+#### Baseline Reliability Diagram
+![Baseline Reliability Diagram](results/figures/generated/baseline_reliability_diagram.png)
+
+#### Ensemble Reliability Diagram
+![Ensemble Reliability Diagram](results/figures/generated/ensemble_reliability_diagram.png)
+
+### Comparison Figure
+![Baseline vs Ensemble Metrics](results/figures/generated/baseline_vs_ensemble_metrics.png)
+
+### Interpretation
+
+The deep ensemble improved predictive performance relative to the single-model baseline, especially on uncertainty-aware metrics.
+
+Key observations:
+- Higher accuracy indicates slightly stronger classification performance
+- Lower NLL suggests better probabilistic predictions
+- Lower Brier score suggests better calibrated class probabilities
+- The reliability diagram provides a visual check on calibration quality
+
+Overall, the ensemble results were directionally consistent with the central claim of the paper: independently trained deep networks, combined as an ensemble, can provide strong uncertainty estimates while remaining simple to implement.
+
+
+
+## Key Outputs
+
+Running the full pipeline produces:
+
+### Tables
+- `results/tables/generated/baseline_metrics.json`
+- `results/tables/generated/ensemble_metrics.json`
+- `results/tables/generated/baseline_vs_ensemble.json`
+- `results/tables/generated/baseline_vs_ensemble.csv`
+
+### Figures
+- `results/figures/generated/baseline_reliability_diagram.png`
+- `results/figures/generated/ensemble_reliability_diagram.png`
+- `results/figures/generated/baseline_vs_ensemble_metrics.png`
+
+### Checkpoints
+- `checkpoints/mnist_baseline.pt`
+- `checkpoints/ensemble/member_0.pt`
+- `checkpoints/ensemble/member_1.pt`
+- `checkpoints/ensemble/member_2.pt`
+- `checkpoints/ensemble/member_3.pt`
+- `checkpoints/ensemble/member_4.pt`
+
+
+
+## Current Status
+
+### Completed Milestones
+
+#### Milestone: v0.1.0 - Baseline Replication Setup
+
+- ✅ Create GitHub repository
+- ✅ Create local project structure
+- ✅ Add `.gitignore`
+- ✅ Add initial README
+- ✅ Set up environment and dependencies
+- ✅ Implement MNIST data pipeline
+- ✅ Implement baseline classifier
+- ✅ Implement evaluation metrics
+- ✅ Implement reliability diagram
+- ✅ Add runnable training and evaluation scripts
+
+
+#### Milestone: v0.2.0 - Deep Ensemble Replication
+
+- ✅ Implement ensemble checkpoint saving/loading
+- ✅ Implement ensemble prediction via probability averaging
+- ✅ Train 5 independent ensemble members
+- ✅ Evaluate ensemble performance
+- ✅ Compare baseline vs ensemble results
+- ✅ Save comparison artifacts
+- ✅ Document results in the README
+
+
+### Next Milestones
+
+
+#### v0.3.0 - Extended Uncertainty Analysis
+
+Possible next steps:
+- Excpected Calibration Error (ECE)
+- MC Dropout comparison
+- adversarial training
+- out-of-distribution evaluation
+- additional datasets beyond MNIST
 
 
 
