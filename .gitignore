@@ -48,7 +48,7 @@ runs/
 logs/
 
 # Results that are generated, not hand-written
-results/figures/generated/
+# results/figures/generated/
 results/tables/generated/
 
 # Model files
