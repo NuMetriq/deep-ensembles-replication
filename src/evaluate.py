@@ -10,26 +10,6 @@ from src.metrics import compute_metrics, reliability_diagram_stats
 
 
 @torch.no_grad()
-def evaluate_from_logits(
-    logits: torch.Tensor,
-    targets: torch.Tensor,
-    n_bins: int = 10,
-) -> Dict[str, object]:
-    """
-    Evaluate already-collected logits and targets.
-    """
-    metrics = compute_metrics(logits, targets)
-    reliability_stats = reliability_diagram_stats(logits, targets, n_bins=n_bins)
-
-    return {
-        "metrics": metrics,
-        "logits": logits,
-        "targets": targets,
-        "reliability_stats": reliability_stats,
-    }
-
-
-@torch.no_grad()
 def collect_logits_and_targets(
     model: nn.Module,
     dataloader: DataLoader,
@@ -54,11 +34,34 @@ def collect_logits_and_targets(
 
 
 @torch.no_grad()
+def evaluate_from_logits(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    n_bins: int = 10,
+) -> Dict[str, object]:
+    """
+    Evaluate already-collected logits and targets.
+    """
+    metrics = compute_metrics(logits, targets)
+    reliability_stats = reliability_diagram_stats(logits, targets, n_bins=n_bins)
+
+    return {
+        "metrics": metrics,
+        "logits": logits,
+        "targets": targets,
+        "reliability_stats": reliability_stats,
+    }
+
+
+@torch.no_grad()
 def evaluate_model(
     model: nn.Module,
     dataloader: DataLoader,
     device: torch.device,
     n_bins: int = 10,
 ) -> Dict[str, object]:
+    """
+    Evaluate model and return scalar metrics plus reliability stats.
+    """
     logits, targets = collect_logits_and_targets(model, dataloader, device)
     return evaluate_from_logits(logits, targets, n_bins=n_bins)
