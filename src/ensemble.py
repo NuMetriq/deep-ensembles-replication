@@ -5,19 +5,13 @@ from typing import Callable
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 
 
 def get_ensemble_checkpoint_path(
     checkpoint_dir: str | Path,
     member_index: int,
 ) -> Path:
-    """
-    Return the checkpoint path for a specific ensemble member.
-
-    Example
-    -------
-    checkpoints/ensemble/member_0.pt
-    """
     checkpoint_dir = Path(checkpoint_dir)
     return checkpoint_dir / f"member_{member_index}.pt"
 
@@ -27,9 +21,6 @@ def save_ensemble_member_checkpoint(
     checkpoint_dir: str | Path,
     member_index: int,
 ) -> Path:
-    """
-    Save a single ensemble member checkpoint and return the saved path.
-    """
     save_path = get_ensemble_checkpoint_path(checkpoint_dir, member_index)
     save_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), save_path)
@@ -41,9 +32,6 @@ def load_ensemble_member_checkpoint(
     checkpoint_path: str | Path,
     device: torch.device,
 ) -> nn.Module:
-    """
-    Load a checkpoint into an existing model instance.
-    """
     checkpoint_path = Path(checkpoint_path)
 
     if not checkpoint_path.exists():
@@ -59,14 +47,6 @@ def load_ensemble_member_checkpoint(
 def find_ensemble_checkpoint_paths(
     checkpoint_dir: str | Path,
 ) -> list[Path]:
-    """
-    Find ensemble checkpoints in a directory, sorted by member index.
-
-    Expected filenames:
-        member_0.pt
-        member_1.pt
-        ...
-    """
     checkpoint_dir = Path(checkpoint_dir)
 
     if not checkpoint_dir.exists():
@@ -87,23 +67,6 @@ def load_ensemble_models(
     checkpoint_dir: str | Path,
     device: torch.device,
 ) -> list[nn.Module]:
-    """
-    Create and load all ensemble member models from a checkpoint directory.
-
-    Parameters
-    ----------
-    model_factory : Callable[[], nn.Module]
-        Zero-argument function that returns a fresh model instance.
-    checkpoint_dir : str | Path
-        Directory containing member_*.pt checkpoints.
-    device : torch.device
-        Device to load models onto.
-
-    Returns
-    -------
-    list[nn.Module]
-        Loaded models in sorted member order.
-    """
     checkpoint_paths = find_ensemble_checkpoint_paths(checkpoint_dir)
 
     models: list[nn.Module] = []
@@ -115,11 +78,94 @@ def load_ensemble_models(
     return models
 
 
+@torch.no_grad()
+def ensemble_predict_proba(
+    models: list[nn.Module],
+    dataloader: DataLoader,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute ensemble probabilities by averaging member probabilities.
+
+    Parameters
+    ----------
+    models : list[nn.Module]
+        Loaded ensemble member models.
+    dataloader : DataLoader
+        Dataloader providing (x, y) batches.
+    device : torch.device
+        Device for inference.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        mean_probs: shape (N, C)
+        targets: shape (N,)
+    """
+    if not models:
+        raise ValueError("models must be a non-empty list")
+
+    for model in models:
+        model.eval()
+
+    all_mean_probs = []
+    all_targets = []
+
+    for x, y in dataloader:
+        x = x.to(device)
+
+        member_probs = []
+        for model in models:
+            logits = model(x)
+            probs = torch.softmax(logits, dim=1)
+            member_probs.append(probs)
+
+        stacked_probs = torch.stack(member_probs, dim=0)  # (M, B, C)
+        mean_probs = stacked_probs.mean(dim=0)  # (B, C)
+
+        all_mean_probs.append(mean_probs.cpu())
+        all_targets.append(y.cpu())
+
+    return torch.cat(all_mean_probs, dim=0), torch.cat(all_targets, dim=0)
+
+
+def probs_to_logits(probs: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
+    """
+    Convert probabilities to log-probabilities for metric compatibility.
+
+    This is useful because your existing metric functions expect logits.
+    Log-probabilities are valid logits for softmax-based metrics.
+    """
+    if probs.ndim != 2:
+        raise ValueError(f"probs must have shape (N, C), got {tuple(probs.shape)}")
+
+    probs = probs.clamp_min(eps)
+    probs = probs / probs.sum(dim=1, keepdim=True)
+    return torch.log(probs)
+
+
+@torch.no_grad()
+def ensemble_predict_logits(
+    models: list[nn.Module],
+    dataloader: DataLoader,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute ensemble predictions and return log-probabilities as logits.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        ensemble_logits: shape (N, C)
+        targets: shape (N,)
+    """
+    mean_probs, targets = ensemble_predict_proba(models, dataloader, device)
+    ensemble_logits = probs_to_logits(mean_probs)
+    return ensemble_logits, targets
+
+
 def _member_index_from_path(path: Path) -> int:
-    """
-    Extract the member index from a path like 'member_3.pt'.
-    """
-    stem = path.stem  # member_3
+    stem = path.stem
     prefix = "member_"
     if not stem.startswith(prefix):
         raise ValueError(f"Unexpected checkpoint filename: {path.name}")
