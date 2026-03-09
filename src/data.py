@@ -8,6 +8,73 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 
+class AddGaussianNoise:
+    """
+    Add Gaussian noise to a tensor image and clamp back to a valid range.
+    """
+
+    def __init__(self, mean: float = 0.0, std: float = 0.2) -> None:
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        noisy = tensor + torch.randn_like(tensor) * self.std + self.mean
+        return torch.clamp(noisy, 0.0, 1.0)
+
+
+def get_mnist_shifted_test_dataset(
+    data_dir: str | Path = "data",
+    noise_std: float = 0.2,
+) -> datasets.MNIST:
+    """
+    Create a shifted MNIST test dataset using Gaussian noise.
+    """
+    data_dir = Path(data_dir)
+
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            AddGaussianNoise(std=noise_std),
+            transforms.Normalize((0.1307,), (0.3081,)),
+        ]
+    )
+
+    test_dataset = datasets.MNIST(
+        root=data_dir,
+        train=False,
+        download=True,
+        transform=transform,
+    )
+
+    return test_dataset
+
+
+def get_mnist_shifted_test_loader(
+    data_dir: str | Path = "data",
+    batch_size: int = 128,
+    num_workers: int = 0,
+    pin_memory: bool = False,
+    noise_std: float = 0.2,
+) -> DataLoader:
+    """
+    Create a shifted MNIST test dataloader using Gaussian noise.
+    """
+    test_dataset = get_mnist_shifted_test_dataset(
+        data_dir=data_dir,
+        noise_std=noise_std,
+    )
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+    )
+
+    return test_loader
+
+
 def get_mnist_transforms() -> transforms.Compose:
     """
     Return the basic transform pipeline for MNIST.
