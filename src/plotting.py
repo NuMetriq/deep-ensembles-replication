@@ -99,3 +99,90 @@ def plot_reliability_diagram(
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()
+
+
+def top_class_confidence_from_logits(logits: torch.Tensor) -> torch.Tensor:
+    """
+    Extract top-class confidence from logits.
+
+    Parameters
+    ----------
+    logits : torch.Tensor
+        Shape (N, C), raw model outputs or log-probabilities.
+
+    Returns
+    -------
+    torch.Tensor
+        Shape (N,), max predicted probability for each sample.
+    """
+    if logits.ndim != 2:
+        raise ValueError(f"logits must have shape (N, C), got {tuple(logits.shape)}")
+
+    probs = torch.softmax(logits, dim=1)
+    confidences, _ = probs.max(dim=1)
+    return confidences.cpu()
+
+
+def plot_confidence_histogram(
+    confidences: torch.Tensor,
+    save_path: str | Path,
+    title: str = "Prediction Confidence Histogram",
+    n_bins: int = 20,
+) -> None:
+    """
+    Plot and save a histogram of top-class prediction confidences.
+    """
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    plt.figure(figsize=(7, 5))
+    plt.hist(confidences.numpy(), bins=n_bins, range=(0.0, 1.0), edgecolor="black")
+    plt.xlim(0, 1)
+    plt.xlabel("Top-class confidence")
+    plt.ylabel("Count")
+    plt.title(title)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+
+
+def plot_confidence_histogram_overlay(
+    baseline_confidences: torch.Tensor,
+    ensemble_confidences: torch.Tensor,
+    save_path: str | Path,
+    title: str = "Baseline vs Ensemble Confidence Histogram",
+    n_bins: int = 20,
+) -> None:
+    """
+    Plot and save an overlaid confidence histogram comparing baseline and ensemble.
+    """
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    plt.figure(figsize=(7, 5))
+    plt.hist(
+        baseline_confidences.numpy(),
+        bins=n_bins,
+        range=(0.0, 1.0),
+        alpha=0.6,
+        label="Baseline",
+        edgecolor="black",
+    )
+    plt.hist(
+        ensemble_confidences.numpy(),
+        bins=n_bins,
+        range=(0.0, 1.0),
+        alpha=0.6,
+        label="Ensemble",
+        edgecolor="black",
+    )
+    plt.xlim(0, 1)
+    plt.xlabel("Top-class confidence")
+    plt.ylabel("Count")
+    plt.title(title)
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150)
+    plt.close()
