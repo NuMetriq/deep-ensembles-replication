@@ -169,9 +169,16 @@ def reliability_diagram_stats(
     }
 
 
-def compute_metrics(logits: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
+def expected_calibration_error_from_logits(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    n_bins: int = 10,
+) -> float:
     """
-    Compute the main classification metrics from raw logits.
+    Compute Expected Calibration Error (ECE) from raw logits.
+
+    ECE is the weighted average of the absolute difference between
+    average confidence and average accuracy across confidence bins.
 
     Parameters
     ----------
@@ -179,16 +186,43 @@ def compute_metrics(logits: torch.Tensor, targets: torch.Tensor) -> Dict[str, fl
         Shape (N, C), raw model outputs.
     targets : torch.Tensor
         Shape (N,), integer class labels.
+    n_bins : int
+        Number of confidence bins.
 
     Returns
     -------
-    dict[str, float]
-        Dictionary with accuracy, nll, and brier score.
+    float
+        Expected calibration error in [0, 1].
+    """
+    stats = reliability_diagram_stats(logits, targets, n_bins=n_bins)
+
+    bin_counts = stats["bin_counts"].float()
+    avg_confidence = stats["avg_confidence"]
+    avg_accuracy = stats["avg_accuracy"]
+
+    total = bin_counts.sum()
+    if total == 0:
+        return 0.0
+
+    gaps = torch.abs(avg_confidence - avg_accuracy)
+    ece = torch.sum((bin_counts / total) * gaps)
+
+    return float(ece.item())
+
+
+def compute_metrics(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    n_bins: int = 10,
+) -> Dict[str, float]:
+    """
+    Compute the main classification and calibration metrics from raw logits.
     """
     return {
         "accuracy": accuracy_from_logits(logits, targets),
         "nll": nll_from_logits(logits, targets),
         "brier": brier_score_from_logits(logits, targets),
+        "ece": expected_calibration_error_from_logits(logits, targets, n_bins=n_bins),
     }
 
 

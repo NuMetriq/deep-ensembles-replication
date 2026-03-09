@@ -10,7 +10,7 @@ def test_evaluate_from_logits_returns_expected_keys():
     results = evaluate_from_logits(logits, targets, n_bins=10)
 
     assert set(results.keys()) == {"metrics", "logits", "targets", "reliability_stats"}
-    assert set(results["metrics"].keys()) == {"accuracy", "nll", "brier"}
+    assert set(results["metrics"].keys()) == {"accuracy", "nll", "brier", "ece"}
 
     stats = results["reliability_stats"]
     assert set(stats.keys()) == {

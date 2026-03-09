@@ -42,7 +42,7 @@ def evaluate_from_logits(
     """
     Evaluate already-collected logits and targets.
     """
-    metrics = compute_metrics(logits, targets)
+    metrics = compute_metrics(logits, targets, n_bins=n_bins)
     reliability_stats = reliability_diagram_stats(logits, targets, n_bins=n_bins)
 
     return {

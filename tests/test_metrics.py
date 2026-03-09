@@ -6,6 +6,7 @@ from src.metrics import (
     accuracy_from_logits,
     brier_score_from_logits,
     compute_metrics,
+    expected_calibration_error_from_logits,
     nll_from_logits,
     reliability_diagram_stats,
 )
@@ -53,7 +54,7 @@ def test_compute_metrics_returns_expected_keys():
 
     metrics = compute_metrics(logits, targets)
 
-    assert set(metrics.keys()) == {"accuracy", "nll", "brier"}
+    assert set(metrics.keys()) == {"accuracy", "nll", "brier", "ece"}
     assert 0.0 <= metrics["accuracy"] <= 1.0
     assert metrics["nll"] >= 0.0
     assert metrics["brier"] >= 0.0
@@ -81,3 +82,43 @@ def test_reliability_stats_shapes():
     assert stats["bin_counts"].shape == (15,)
     assert stats["avg_confidence"].shape == (15,)
     assert stats["avg_accuracy"].shape == (15,)
+
+
+def test_ece_is_zero_for_perfect_calibration_single_bin():
+    logits = torch.tensor(
+        [
+            [10.0, 0.0],
+            [0.0, 10.0],
+        ]
+    )
+    targets = torch.tensor([0, 1])
+
+    ece = expected_calibration_error_from_logits(logits, targets, n_bins=1)
+
+    assert 0.0 <= ece <= 1.0
+    assert isinstance(ece, float)
+
+
+def test_ece_nonnegative_and_finite():
+    torch.manual_seed(0)
+    logits = torch.randn(128, 10)
+    targets = torch.randint(0, 10, (128,))
+
+    ece = expected_calibration_error_from_logits(logits, targets, n_bins=10)
+
+    assert ece >= 0.0
+    assert math.isfinite(ece)
+
+
+def test_compute_metrics_includes_ece():
+    torch.manual_seed(0)
+    logits = torch.randn(16, 10)
+    targets = torch.randint(0, 10, (16,))
+
+    metrics = compute_metrics(logits, targets, n_bins=10)
+
+    assert set(metrics.keys()) == {"accuracy", "nll", "brier", "ece"}
+    assert 0.0 <= metrics["accuracy"] <= 1.0
+    assert metrics["nll"] >= 0.0
+    assert metrics["brier"] >= 0.0
+    assert metrics["ece"] >= 0.0
