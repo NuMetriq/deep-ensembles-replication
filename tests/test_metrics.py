@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from src.metrics import (
     accuracy_from_logits,
     brier_score_from_logits,
+    calibration_gap_stats_from_logits,
     compute_metrics,
     expected_calibration_error_from_logits,
     nll_from_logits,
@@ -122,3 +123,30 @@ def test_compute_metrics_includes_ece():
     assert metrics["nll"] >= 0.0
     assert metrics["brier"] >= 0.0
     assert metrics["ece"] >= 0.0
+
+
+def test_calibration_gap_stats_shapes():
+    torch.manual_seed(0)
+    logits = torch.randn(64, 10)
+    targets = torch.randint(0, 10, (64,))
+
+    stats = calibration_gap_stats_from_logits(logits, targets, n_bins=12)
+
+    assert stats["gap"].shape == (12,)
+    assert stats["abs_gap"].shape == (12,)
+    assert stats["max_gap"] >= 0.0
+    assert stats["mean_abs_gap"] >= 0.0
+
+
+def test_calibration_gap_stats_consistent_with_abs_gap():
+    torch.manual_seed(0)
+    logits = torch.randn(50, 10)
+    targets = torch.randint(0, 10, (50,))
+
+    stats = calibration_gap_stats_from_logits(logits, targets, n_bins=10)
+
+    expected_max = float(stats["abs_gap"].max().item())
+    expected_mean = float(stats["abs_gap"].mean().item())
+
+    assert abs(stats["max_gap"] - expected_max) < 1e-12
+    assert abs(stats["mean_abs_gap"] - expected_mean) < 1e-12

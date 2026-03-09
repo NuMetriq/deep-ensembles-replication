@@ -9,7 +9,13 @@ def test_evaluate_from_logits_returns_expected_keys():
 
     results = evaluate_from_logits(logits, targets, n_bins=10)
 
-    assert set(results.keys()) == {"metrics", "logits", "targets", "reliability_stats"}
+    assert set(results.keys()) == {
+        "metrics",
+        "logits",
+        "targets",
+        "reliability_stats",
+        "calibration_gap_stats",
+    }
     assert set(results["metrics"].keys()) == {"accuracy", "nll", "brier", "ece"}
 
     stats = results["reliability_stats"]
@@ -20,3 +26,6 @@ def test_evaluate_from_logits_returns_expected_keys():
         "avg_confidence",
         "avg_accuracy",
     }
+
+    gap_stats = results["calibration_gap_stats"]
+    assert set(gap_stats.keys()) == {"gap", "abs_gap", "max_gap", "mean_abs_gap"}

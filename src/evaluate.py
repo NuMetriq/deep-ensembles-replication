@@ -6,7 +6,11 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from src.metrics import compute_metrics, reliability_diagram_stats
+from src.metrics import (
+    calibration_gap_stats_from_logits,
+    compute_metrics,
+    reliability_diagram_stats,
+)
 
 
 @torch.no_grad()
@@ -44,12 +48,16 @@ def evaluate_from_logits(
     """
     metrics = compute_metrics(logits, targets, n_bins=n_bins)
     reliability_stats = reliability_diagram_stats(logits, targets, n_bins=n_bins)
+    calibration_gap_stats = calibration_gap_stats_from_logits(
+        logits, targets, n_bins=n_bins
+    )
 
     return {
         "metrics": metrics,
         "logits": logits,
         "targets": targets,
         "reliability_stats": reliability_stats,
+        "calibration_gap_stats": calibration_gap_stats,
     }
 
 

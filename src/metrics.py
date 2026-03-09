@@ -210,6 +210,45 @@ def expected_calibration_error_from_logits(
     return float(ece.item())
 
 
+def calibration_gap_stats_from_logits(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    n_bins: int = 10,
+) -> Dict[str, object]:
+    """
+    Compute calibration gap summaries from reliability bins.
+
+    Parameters
+    ----------
+    logits : torch.Tensor
+        Shape (N, C), raw model outputs.
+    targets : torch.Tensor
+        Shape (N,), integer class labels.
+    n_bins : int
+        Number of confidence bins.
+
+    Returns
+    -------
+    dict[str, object]
+        Dictionary containing:
+        - gap: signed per-bin gap = avg_confidence - avg_accuracy
+        - abs_gap: absolute per-bin gap
+        - max_gap: maximum absolute calibration gap (MCE-style)
+        - mean_abs_gap: mean absolute bin gap across all bins
+    """
+    stats = reliability_diagram_stats(logits, targets, n_bins=n_bins)
+
+    gap = stats["avg_confidence"] - stats["avg_accuracy"]
+    abs_gap = torch.abs(gap)
+
+    return {
+        "gap": gap,
+        "abs_gap": abs_gap,
+        "max_gap": float(abs_gap.max().item()),
+        "mean_abs_gap": float(abs_gap.mean().item()),
+    }
+
+
 def compute_metrics(
     logits: torch.Tensor,
     targets: torch.Tensor,
