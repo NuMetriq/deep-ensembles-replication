@@ -46,7 +46,7 @@ This project is designed as a step-by-step replication rather than an attempt to
 
 
 
-## Planned Scope
+## Scope
 
 
 
@@ -65,17 +65,17 @@ This project is designed as a step-by-step replication rather than an attempt to
 - Accuracy
 - Negative Log-Likelihood (NLL)
 - Brier Score
+- Expected Calibration Error
 - Reliability Diagram
-- Expected Calibration Error (optional extension)
 
 
 
-### Possible later extensions
+### Later extensions completed
 
-- MC Dropout comparison
-- Adversarial training
-- Out-of-distribution evaluation
-- Additional datasets beyond MNIST
+- Calibration gap summaries from reliability bins
+- Improved reliability diagrams with bin counts
+- Prediction confidence histograms
+- Simple distribution-shift evaluation using noisy MNIST
 
 
 
@@ -101,7 +101,8 @@ deep-ensembles-replication/
 │   ├── train.py
 │   ├── evaluate.py
 │   ├── ensemble.py
-│   └── metrics.py
+│   ├── metrics.py
+│   └── plotting.py
 ├── scripts/
 │   ├── __init__.py
 │   ├── compare_results.py
@@ -109,6 +110,11 @@ deep-ensembles-replication/
 │   ├── save_comparison_artifacts.py
 │   ├── train_single.py
 │   ├── train_ensemble.py
+│   ├── save_confidence_histograms.py
+│   ├── save_calibration_artifacts.py
+│   ├── compare_shifted_results.py
+│   ├── evaluate_shifted_mnist.py
+│   ├── compare_shifted_mnist.py
 │   └── evaluate_mnist.py
 ├── tests/
 │   ├── test_data.py
@@ -223,13 +229,39 @@ python -m scripts.evaluate_ensemble
 ```
 
 
-### Generate comparison artifacts
+### Generate baseline vs ensemble comparison artifacts
 
 
 ```bash
 python -m scripts.compare_results
 python -m scripts.save_comparison_artifacts
 ```
+
+
+### Save confidence histograms
+
+
+```bash
+python -m scripts.save_confidence_histograms
+```
+
+
+### Evaluate on shifted MNIST
+
+
+```bash
+python -m scripts.evaluate_shifted_mnist
+python -m scripts.compare_shifted_results
+```
+
+
+### Save calibration-focused artifacts
+
+
+```bash
+python -m scripts.save_calibration_artifacts
+```
+
 
 
 ## Results
@@ -271,15 +303,87 @@ The main evaluation metrics were:
 
 ### Interpretation
 
-The deep ensemble improved predictive performance relative to the single-model baseline, especially on uncertainty-aware metrics.
+On clean MNIST, the deep ensemble improved on the single-model baseline across the main metrics. Accuracy increased slightly, while NLL and Brier score both improved more noticeably. This is consistent with the paper’s central claim that deep ensembles improve not only point predictions, but also the quality of probabilistic predictions.
 
-Key observations:
-- Higher accuracy indicates slightly stronger classification performance
-- Lower NLL suggests better probabilistic predictions
-- Lower Brier score suggests better calibrated class probabilities
-- The reliability diagram provides a visual check on calibration quality
 
-Overall, the ensemble results were directionally consistent with the central claim of the paper: independently trained deep networks, combined as an ensemble, can provide strong uncertainty estimates while remaining simple to implement.
+
+### Calibration and Uncertainty Analysis
+
+#### Added in `v0.3.0`
+
+This milestone extends the replication with a more detailed calibration and uncertainty analysis.
+
+New additions include:
+
+- Expected Calibration Error (ECE)
+- calibration gap summaries from reliability bins
+- improved reliability diagrams with bin counts
+- prediction confidence histograms
+- evaluation under a simple distribution shift using noisy MNIST
+
+#### Calibration Metrics
+
+In addition to accuracy, NLL, and Brier score, this version reports:
+
+- **ECE**: Expected Calibration Error
+- reliability-bin gap summaries for calibration analysis
+
+#### Clean Data Comparison
+
+| Metric | Baseline | Ensemble | Delta (Ensemble - Baseline) |
+|---|---:|---:|---:|
+| Accuracy | 0.990200 | 0.992400 | +0.002200 |
+| NLL | 0.033565 | 0.020762 | -0.012803 |
+| Brier | 0.016628 | 0.010863 | -0.005765 |
+
+On clean MNIST, the deep ensemble outperformed the single-model baseline across all reported metrics. Accuracy improved from 0.990200 to 0.992400, while NLL decreased from 0.033565 to 0.020762 and Brier score decreased from 0.016628 to 0.010863. Expected Calibration Error (ECE) also improved slightly, falling from 0.003731 to 0.003200. Overall, these results suggest that the ensemble produced not only slightly better classifications, but also better calibrated and more reliable probability estimates.
+
+#### Shifted Data Comparison
+
+| Model | Condition | Accuracy | NLL | Brier | ECE |
+|---|---|---:|---:|---:|---:|
+| Baseline | Clean | 0.990200 | 0.033565 | 0.016628 | 0.003731 |
+| Baseline | Shifted | 0.979900 | 0.061837 | 0.029985 | 0.002583 |
+| Ensemble | Clean | 0.992400 | 0.020762 | 0.010863 | 0.003200 |
+| Ensemble | Shifted | 0.991200 | 0.034548 | 0.015209 | 0.012882 |
+
+Under the noisy shifted-input condition, the ensemble remained stronger than the baseline on accuracy, NLL, and Brier score. The baseline dropped to 0.979900 accuracy, while the ensemble remained at 0.991200. The ensemble also retained lower NLL (0.034548 vs. 0.061837) and lower Brier score (0.015209 vs. 0.029985), suggesting better overall predictive performance and probability quality under shift.
+
+However, the ECE result is more mixed. The baseline's shifted ECE was 0.002583, while the ensemble's shifted ECE increased to 0.012882. So in this experiment, the ensemble was clearly stronger on accuracy, NLL, and Brier score under shift, but not uniformly better on ECE. This is a useful reminder that calibration behavior can depend on both the metric and the shift condition, and that stronger uncertainty-aware performance does not always imply improvement on every calibration summary.
+
+Taken together, the shifted-data result is favorable to deep ensembles on most metrics, but not completely one-sided. The ensemble degraded more gracefully on accuracy, NLL, and Brier score, yet its ECE under this particular noisy condition was worse than the baseline's. That makes the replication more interesting: the ensemble appears more robust overall, but calibration under shift is not captured perfectly by a single metric.
+
+These results suggest that deep ensembles improved overall predictive quality and robustness in this replication, while calibration under shift remained more nuanced and metric-dependent.
+
+
+
+### Reliability Diagrams
+
+#### Clean MNIST Baseline
+![Baseline Reliability Diagram](results/figures/generated/baseline_reliability_diagram.png)
+
+#### Clean MNIST Ensemble
+![Ensemble Reliability Diagram](results/figures/generated/ensemble_reliability_diagram.png)
+
+#### Shifted MNIST Baseline
+![Shifted Baseline Reliability Diagram](results/figures/generated/shifted_baseline_reliability_diagram.png)
+
+#### Shifted MNIST Ensemble
+![Shifted Ensemble Reliability Diagram](results/figures/generated/shifted_ensemble_reliability_diagram.png)
+
+### Confidence Histograms
+
+#### Clean Confidence Comparison
+![Baseline vs Ensemble Confidence Histogram](results/figures/generated/baseline_vs_ensemble_confidence_histogram.png)
+
+#### Shifted Baseline Confidence Histogram
+![Shifted Baseline Confidence Histogram](results/figures/generated/shifted_baseline_confidence_histogram.png)
+
+#### Shifted Ensemble Confidence Histogram
+![Shifted Ensemble Confidence Histogram](results/figures/generated/shifted_ensemble_confidence_histogram.png)
+
+### ECE Comparison
+![ECE Clean vs Shifted](results/figures/generated/ece_clean_vs_shifted.png)
 
 
 
@@ -292,11 +396,23 @@ Running the full pipeline produces:
 - `results/tables/generated/ensemble_metrics.json`
 - `results/tables/generated/baseline_vs_ensemble.json`
 - `results/tables/generated/baseline_vs_ensemble.csv`
+- `results/tables/generated/calibration_comparison_clean.csv`
+- `results/tables/generated/calibration_comparison_clean.md
+- `results/tables/generated/calibration_comparison_shifted.csv`
+- `results/tables/generated/calibration_comparison_shifted.md`
 
 ### Figures
 - `results/figures/generated/baseline_reliability_diagram.png`
 - `results/figures/generated/ensemble_reliability_diagram.png`
 - `results/figures/generated/baseline_vs_ensemble_metrics.png`
+- `results/figures/generated/baseline_confidence_histogram.png`
+- `results/figures/generated/ensemble_confidence_histogram.png`
+- `results/figures/generated/baseline_vs_ensemble_confidence_histogram.png`
+- `results/figures/generated/shifted_baseline_reliability_diagram.png`
+- `results/figures/generated/shifted_ensemble_reliability_diagram.png`
+- `results/figures/generated/shifted_baseline_confidence_histogram.png`
+- `results/figures/generated/shifted_ensemble_confidence_histogram.png`
+- `results/figures/generated/ece_clean_vs_shifted.png`
 
 ### Checkpoints
 - `checkpoints/mnist_baseline.pt`
@@ -337,18 +453,28 @@ Running the full pipeline produces:
 - ✅ Document results in the README
 
 
+#### v0.3.0 - Extended Uncertainty Analysis
+
+- ✅ Implement Expected Calibration Error (ECE)
+- ✅ Add calibration gap summaries
+- ✅ Improve reliability diagram visualization
+- ✅ Add confidence histogram visualization
+- ✅ Evaluate uncertainty under simple distribution shift
+- ✅ Save calibration-focused comparison artifacts
+- ✅ Update README with calibration analysis
+
+
+
 ### Next Milestones
 
 
-#### v0.3.0 - Extended Uncertainty Analysis
+#### Possible future directions
 
-Possible next steps:
-- Excpected Calibration Error (ECE)
 - MC Dropout comparison
 - adversarial training
-- out-of-distribution evaluation
+- out-of-distribution evaluation beyond noisy MNIST
 - additional datasets beyond MNIST
-
+- broader replication of experiments from the original paper
 
 
 ## Replication Philosophy
@@ -365,42 +491,6 @@ This repository is intended to be:
 
 
 The emphasis is on understanding and communicating the method clearly, not just matching every reported number exactly.
-
-
-
-## Roadmap
-
-
-
-### v0.1.0 - Baseline Replication Setup
-
-
-
-Establish the project foundation and train/evaluate a single MNIST classifier.
-
-
-
-### v0.2.0 - Deep Ensemble Replication
-
-
-
-Train a 5-model ensemble and compare it against the baseline on core metrics.
-
-
-
-### v0.3.0 - Calibration and Uncertainty Analysis
-
-
-
-Expand evaluation with stronger calibration analysis and visualizations.
-
-
-
-### v0.4.0 - Extended Replication
-
-
-
-Add comparisons such as MC Dropout, adversarial training, or out-of-distribution tests.
 
 
 
