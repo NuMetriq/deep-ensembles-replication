@@ -90,45 +90,61 @@ deep-ensembles-replication/
 ├── README.md
 ├── requirements.txt
 ├── pytest.ini
-├── .gitignore
 ├── configs/
 │   └── mnist.yaml
 ├── src/
 │   ├── __init__.py
-│   ├── plotting.py
 │   ├── data.py
 │   ├── model.py
 │   ├── train.py
 │   ├── evaluate.py
 │   ├── ensemble.py
+│   ├── mc_dropout.py
 │   ├── metrics.py
 │   └── plotting.py
 ├── scripts/
 │   ├── __init__.py
-│   ├── compare_results.py
-│   ├── evaluate_ensemble.py
-│   ├── save_comparison_artifacts.py
 │   ├── train_single.py
+│   ├── evaluate_mnist.py
 │   ├── train_ensemble.py
+│   ├── evaluate_ensemble.py
+│   ├── compare_results.py
+│   ├── save_comparison_artifacts.py
 │   ├── save_confidence_histograms.py
-│   ├── save_calibration_artifacts.py
-│   ├── compare_shifted_results.py
 │   ├── evaluate_shifted_mnist.py
-│   ├── compare_shifted_mnist.py
-│   └── evaluate_mnist.py
+│   ├── compare_shifted_results.py
+│   ├── save_calibration_artifacts.py
+│   ├── train_mc_dropout.py
+│   ├── evaluate_mc_dropout.py
+│   ├── evaluate_shifted_mc_dropout.py
+│   ├── compare_mc_dropout_shifted_results.py
+│   └── compare_all_methods.py
 ├── tests/
 │   ├── test_data.py
 │   ├── test_ensemble.py
 │   ├── test_evaluate.py
+│   ├── test_mc_dropout.py
+│   ├── test_mc_dropout_eval.py
 │   ├── test_metrics.py
 │   ├── test_model.py
 │   ├── test_plotting.py
 │   └── test_train.py
+├── checkpoints/
+│   ├── mnist_baseline.pt
+│   ├── mc_dropout.pt
+│   └── ensemble/
+│       ├── member_0.pt
+│       ├── member_1.pt
+│       ├── member_2.pt
+│       ├── member_3.pt
+│       └── member_4.pt
 ├── results/
 │   ├── figures/
+│   │   └── generated/
 │   └── tables/
+│       └── generated/
 └── report/
-   └── replication_report.md
+    └── replication_report.md
 
 ```
 
@@ -263,6 +279,39 @@ python -m scripts.save_calibration_artifacts
 ```
 
 
+### Train the MC Dropout model
+
+
+```bash
+python -m scripts.train_mc_dropout
+```
+
+
+### Evaluate MC Dropout on clean MNIST
+
+
+```bash
+python -m scripts.evaluate_mc_dropout
+```
+
+
+### Evaluate MC Dropout on shifted MNIST
+
+
+```bash
+python -m scripts.evaluate_shifted_mc_dropout
+python -m scripts.compare_mc_dropout_shifted_results
+```
+
+
+### Generate three-way comparison artifacts
+
+
+```bash
+python -m scripts.compare_all_methods
+```
+
+
 
 ## Results
 
@@ -387,41 +436,153 @@ These results suggest that deep ensembles improved overall predictive quality an
 
 
 
+## Deep Ensembles vs MC Dropout
+
+### Added in `v0.4.0`
+This milestone extends the project by adding **MC Dropout** as a third uncertainty-estimation method alongside the single-model baseline and deep ensembles.
+
+The comparison now includes three methods:
+
+- **Baseline:** single deterministic CNN
+- **Deep Ensemble:** 5 independently trained CNNs with probability averaging
+- **MC Dropout:** dropout-enabled CNN with stochastic test-time inference
+
+### Evaluation Setup
+All three methods were evaluated on:
+
+- **Clean MNIST**
+- **Shifted MNIST** with Gaussian noise added to test inputs
+
+The reported metrics are:
+
+- Accuracy
+- Negative Log-Likelihood (NLL)
+- Brier Score
+- Expected Calibration Error (ECE)
+
+### Clean Data Comparison
+
+| Method | Accuracy | NLL | Brier | ECE |
+|---|---:|---:|---:|---:|
+| Baseline | 0.990200 | 0.033565 | 0.016628 | 0.003731 |
+| Ensemble | 0.992400 | 0.020762 | 0.010863 | 0.003200 |
+| MC Dropout | 0.989800 | 0.036127 | 0.016950 | 0.008012 |
+
+### Shifted Data Comparison
+
+| Method | Accuracy | NLL | Brier | ECE |
+|---|---:|---:|---:|---:|
+| Baseline | 0.979900 | 0.061837 | 0.029985 | 0.002583 |
+| Ensemble | 0.991200 | 0.034548 | 0.015209 | 0.012882 |
+| MC Dropout | 0.983700 | 0.070010 | 0.029330 | 0.026868 |
+
+### Comparison Figures
+
+#### Clean MNIST ECE
+![Three-Way Clean ECE Comparison](results/figures/generated/three_way_ece_clean.png)
+
+#### Shifted MNIST ECE
+![Three-Way Shifted ECE Comparison](results/figures/generated/three_way_ece_shifted.png)
+
+#### Clean MNIST NLL
+![Three-Way Clean NLL Comparison](results/figures/generated/three_way_nll_clean.png)
+
+#### Shifted MNIST NLL
+![Three-Way Shifted NLL Comparison](results/figures/generated/three_way_nll_shifted.png)
+
+### Additional Method-Specific Figures
+
+#### MC Dropout Reliability Diagram
+![MC Dropout Reliability Diagram](results/figures/generated/mc_dropout_reliability_diagram.png)
+
+#### Shifted MC Dropout Reliability Diagram
+![Shifted MC Dropout Reliability Diagram](results/figures/generated/shifted_mc_dropout_reliability_diagram.png)
+
+#### MC Dropout Confidence Histogram
+![MC Dropout Confidence Histogram](results/figures/generated/mc_dropout_confidence_histogram.png)
+
+#### Shifted MC Dropout Confidence Histogram
+![Shifted MC Dropout Confidence Histogram](results/figures/generated/shifted_mc_dropout_confidence_histogram.png)
+
+### Interpretation
+
+Adding MC Dropout makes the project a more meaningful uncertainty-estimation comparison. Instead of comparing deep ensembles only against a single deterministic baseline, the repository now compares two different uncertainty-aware approaches under the same training and evaluation setup.
+
+The key questions for this milestone are:
+
+- Does MC Dropout improve uncertainty-aware metrics relative to the single-model baseline?
+- Does MC Dropout remain competitive with deep ensembles on clean data?
+- Under shifted data, which method degrades more gracefully?
+- Are differences between methods more visible in NLL and ECE than in raw accuracy?
+
+In many practical settings, deep ensembles are expected to perform strongly on predictive quality and uncertainty-aware scoring, while MC Dropout offers a cheaper approximate Bayesian alternative. This comparison helps show whether that pattern also appears in this replication.
+
+### Practical Takeaway
+
+This milestone strengthens the project by moving from:
+
+- **baseline vs ensemble**
+
+to:
+
+- **baseline vs ensemble vs MC Dropout**
+
+
+
 ## Key Outputs
 
 Running the full pipeline produces:
 
 ### Tables
+
 - `results/tables/generated/baseline_metrics.json`
 - `results/tables/generated/ensemble_metrics.json`
+- `results/tables/generated/mc_dropout_metrics.json`
+- `results/tables/generated/shifted_baseline_metrics.json`
+- `results/tables/generated/shifted_ensemble_metrics.json`
+- `results/tables/generated/shifted_mc_dropout_metrics.json`
 - `results/tables/generated/baseline_vs_ensemble.json`
 - `results/tables/generated/baseline_vs_ensemble.csv`
 - `results/tables/generated/calibration_comparison_clean.csv`
-- `results/tables/generated/calibration_comparison_clean.md
-- `results/tables/generated/calibration_comparison_shifted.csv`
-- `results/tables/generated/calibration_comparison_shifted.md`
+- `results/tables/generated/calibration_comparison_clean.md`
+- `results/tables/generated/calibration_comparison_shift.csv`
+- `results/tables/generated/calibration_comparison_shift.md`
+- `results/tables/generated/three_way_comparison_clean.csv`
+- `results/tables/generated/three_way_comparison_clean.md`
+- `results/tables/generated/three_way_comparison_shifted.csv`
+- `results/tables/generated/three_way_comparison_shifted.md`
 
 ### Figures
+
 - `results/figures/generated/baseline_reliability_diagram.png`
 - `results/figures/generated/ensemble_reliability_diagram.png`
+- `results/figures/generated/mc_dropout_reliability_diagram.png`
+- `results/figures/generated/shifted_baseline_reliability_diagram.png`
+- `results/figures/generated/shifted_ensemble_reliability_diagram.png`
+- `results/figures/generated/shifted_mc_dropout_reliability_diagram.png`
 - `results/figures/generated/baseline_vs_ensemble_metrics.png`
 - `results/figures/generated/baseline_confidence_histogram.png`
 - `results/figures/generated/ensemble_confidence_histogram.png`
+- `results/figures/generated/mc_dropout_confidence_histogram.png`
 - `results/figures/generated/baseline_vs_ensemble_confidence_histogram.png`
-- `results/figures/generated/shifted_baseline_reliability_diagram.png`
-- `results/figures/generated/shifted_ensemble_reliability_diagram.png`
 - `results/figures/generated/shifted_baseline_confidence_histogram.png`
 - `results/figures/generated/shifted_ensemble_confidence_histogram.png`
+- `results/figures/generated/shifted_mc_dropout_confidence_histogram.png`
 - `results/figures/generated/ece_clean_vs_shifted.png`
+- `results/figures/generated/three_way_ece_clean.png`
+- `results/figures/generated/three_way_ece_shifted.png`
+- `results/figures/generated/three_way_nll_clean.png`
+- `results/figures/generated/three_way_nll_shifted.png`
 
 ### Checkpoints
+
 - `checkpoints/mnist_baseline.pt`
+- `checkpoints/mc_dropout.pt`
 - `checkpoints/ensemble/member_0.pt`
 - `checkpoints/ensemble/member_1.pt`
 - `checkpoints/ensemble/member_2.pt`
 - `checkpoints/ensemble/member_3.pt`
 - `checkpoints/ensemble/member_4.pt`
-
 
 
 ## Current Status
@@ -464,13 +625,22 @@ Running the full pipeline produces:
 - ✅ Update README with calibration analysis
 
 
+#### v0.4.0 - Deep Ensembles vs MC Dropout
+
+- ✅ Implement dropout-enabled MNIST classifier
+- ✅ Add training script for MC Dropout model
+- ✅ Implement stochastic inference for MC Dropout
+- ✅ Evaluate MC Dropout on clean MNIST
+- ✅ Evaluate MC Dropout under shifted MNIST
+- ✅ Add three-way comparison across baseline, ensemble, and MC Dropout
+- ✅ Update README with three-way comparison
+
 
 ### Next Milestones
 
 
 #### Possible future directions
 
-- MC Dropout comparison
 - adversarial training
 - out-of-distribution evaluation beyond noisy MNIST
 - additional datasets beyond MNIST
